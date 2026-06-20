@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+model Project {
+  id             Int             @id @default(autoincrement())
+  name           String
+  description    String?
+  status         ProjectStatus   @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  issues         Issue[]
+  codingSessions CodingSession[]
+}
+
+model Issue {
+  id          Int           @id @default(autoincrement())
+  title       String
+  description String
+  severity    IssueSeverity
+  status      IssueStatus   @default(OPEN)
+  projectId   Int
+  createdAt   DateTime      @default(now())
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([severity])
+}
+
+model CodingSession {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  date      DateTime
+  hours     Float
+  notes     String?
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([date])
+}
