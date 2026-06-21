@@ -30,7 +30,7 @@ export const validate =
 
     if (schemas.query) {
       // Store parsed query in a separate property since req.query is read-only
-      req.parsedQuery = schemas.query.parse(req.query);
+      req.parsedQuery = schemas.query.parse(req.query) as Record<string, any>; 
     }
 
     next();

@@ -19,7 +19,6 @@ export function IssuesPage() {
   const [severity, setSeverity] = useState<IssueSeverity | 'ALL'>('ALL')
   const [status, setStatus] = useState<IssueStatus | 'ALL'>('ALL')
   const [filterProjectId, setFilterProjectId] = useState<number | 'ALL'>(initialProjectId ?? 'ALL')
-  const selectedProject = projects.find((project) => project.id === initialProjectId)
   const filteredIssues = useMemo(
     () =>
       issues.filter(
