@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { IssueSeverity, IssueStatus } from "../../generated/prisma/enums.js";
+import { IssueSeverity, IssueStatus } from "@prisma/client";
 
 export const createIssueSchema = z.object({
   title: z.string().min(1).max(160),
