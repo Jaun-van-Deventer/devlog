@@ -1,11 +1,13 @@
 import { z } from "zod";
-import { IssueSeverity, IssueStatus } from "@prisma/client";
+
+const issueSeverityValues = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+const issueStatusValues = ["OPEN", "IN_PROGRESS", "RESOLVED"] as const;
 
 export const createIssueSchema = z.object({
   title: z.string().min(1).max(160),
   description: z.string().min(1).max(2000),
-  severity: z.enum(IssueSeverity),
-  status: z.enum(IssueStatus).default("OPEN"),
+  severity: z.enum(issueSeverityValues),
+  status: z.enum(issueStatusValues).default("OPEN"),
   projectId: z.coerce.number().int().positive(),
 });
 
@@ -14,8 +16,8 @@ export const updateIssueSchema = createIssueSchema.partial().refine((value) => O
 });
 
 export const issueQuerySchema = z.object({
-  severity: z.enum(IssueSeverity).optional(),
-  status: z.enum(IssueStatus).optional(),
+  severity: z.enum(issueSeverityValues).optional(),
+  status: z.enum(issueStatusValues).optional(),
   projectId: z.coerce.number().int().positive().optional(),
 });
 

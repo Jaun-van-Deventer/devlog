@@ -6,7 +6,7 @@ DevLog is a full-stack developer productivity app for tracking projects, issues,
 
 - Frontend: React, TypeScript, Vite, React Router, Axios, TanStack Query, Tailwind CSS
 - Backend: Node.js, Express, TypeScript, Zod
-- Database: PostgreSQL with Prisma
+- Database: MongoDB
 
 ## Setup
 
@@ -16,10 +16,10 @@ DevLog is a full-stack developer productivity app for tracking projects, issues,
 cp backend/.env.example backend/.env
 ```
 
-2. Start PostgreSQL and the backend container:
+2. Start MongoDB and the backend container:
 
 ```bash
-docker compose up postgres backend
+docker compose up mongodb backend
 ```
 
 3. Or run locally:
@@ -27,7 +27,6 @@ docker compose up postgres backend
 ```bash
 cd backend
 npm install
-npx prisma migrate dev
 npm run dev
 ```
 

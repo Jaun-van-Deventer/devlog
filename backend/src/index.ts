@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { env } from "./lib/env.js";
+import { connectToDatabase } from "./lib/mongodb.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { dashboardRoutes } from "./routes/dashboard.routes.js";
@@ -25,6 +26,14 @@ app.use("/api/sessions", sessionRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  console.log(`DevLog API running on port ${env.PORT}`);
+async function start() {
+  await connectToDatabase();
+  app.listen(env.PORT, () => {
+    console.log(`DevLog API running on port ${env.PORT}`);
+  });
+}
+
+start().catch((error) => {
+  console.error("Failed to start server", error);
+  process.exit(1);
 });
