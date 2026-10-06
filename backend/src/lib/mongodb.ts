@@ -85,6 +85,5 @@ async function ensureIndexes() {
     sessions.createIndex({ id: 1 }, { unique: true }),
     sessions.createIndex({ projectId: 1 }),
     sessions.createIndex({ date: -1 }),
-    counters.createIndex({ _id: 1 }, { unique: true }),
   ]);
 }
