@@ -1,36 +1,60 @@
 import { HttpError } from "../lib/httpError.js";
-import { prisma } from "../lib/prisma.js";
+import { getCollection, getNextId, serializeDocument } from "../lib/mongodb.js";
+import type { CodingSessionDocument, ProjectDocument } from "../lib/mongoModels.js";
 import type { CreateSessionInput } from "../types/session.js";
 
 export const sessionService = {
-  list() {
-    return prisma.codingSession.findMany({
-      orderBy: { date: "desc" },
-      include: { project: true },
-    });
+  async list() {
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
+    const items = await sessions.find({}).sort({ date: -1 }).toArray();
+    const projects = await getCollection<ProjectDocument>("projects");
+
+    return Promise.all(
+      items.map(async (item) => ({
+        ...serializeDocument(item),
+        project: await projects.findOne({ id: item.projectId }),
+      })),
+    );
   },
 
-  getById(id: number) {
-    return prisma.codingSession.findUnique({ where: { id }, include: { project: true } });
+  async getById(id: number) {
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
+    const session = await sessions.findOne({ id });
+    if (!session) return null;
+
+    const projects = await getCollection<ProjectDocument>("projects");
+    return {
+      ...serializeDocument(session),
+      project: await projects.findOne({ id: session.projectId }),
+    };
   },
 
   async create(data: CreateSessionInput) {
-    const project = await prisma.project.findUnique({ where: { id: data.projectId } });
+    const projects = await getCollection<ProjectDocument>("projects");
+    const project = await projects.findOne({ id: data.projectId });
     if (!project) {
       throw new HttpError(404, "Project not found");
     }
 
-    return prisma.codingSession.create({
-      data: {
-        projectId: data.projectId,
-        date: data.date,
-        hours: data.hours,
-        notes: data.notes ?? null,
-      },
-    });
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
+    const session = {
+      id: await getNextId("sessions"),
+      projectId: data.projectId,
+      date: data.date,
+      hours: data.hours,
+      notes: data.notes ?? null,
+    };
+
+    await sessions.insertOne(session as CodingSessionDocument);
+    return {
+      ...serializeDocument(session as CodingSessionDocument),
+      project: serializeDocument(project),
+    };
   },
 
-  remove(id: number) {
-    return prisma.codingSession.delete({ where: { id } });
+  async remove(id: number) {
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
+    const result = await sessions.deleteOne({ id });
+    return result.deletedCount > 0;
   },
 };

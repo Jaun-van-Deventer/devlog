@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { ProjectStatus } from "@prisma/client";
 
-export const projectStatusSchema = z.enum(ProjectStatus);
+const projectStatusValues = ["ACTIVE", "PAUSED", "COMPLETED"] as const;
+export const projectStatusSchema = z.enum(projectStatusValues);
+export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
 export const createProjectSchema = z.object({
   name: z.string().min(1).max(120),
