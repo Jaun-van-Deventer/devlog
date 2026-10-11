@@ -1,45 +1,47 @@
-import { getCollection, getNextId, serializeDocument } from "../lib/mongodb.js";
+import { getCollection, getNextId } from "../lib/mongodb.js";
+import { ownedFilter, serializeOwnedDocument } from "../lib/ownership.js";
+import type { CodingSessionDocument, IssueDocument, ProjectDocument } from "../lib/mongoModels.js";
 import type { CreateProjectInput, UpdateProjectInput } from "../types/project.js";
-import type { ProjectDocument } from "../lib/mongoModels.js";
 
 export const projectService = {
-  async list() {
+  async list(ownerId: string) {
     const projects = await getCollection<ProjectDocument>("projects");
-    const items = await projects.find({}).sort({ createdAt: -1 }).toArray();
+    const items = await projects.find(ownedFilter(ownerId)).sort({ createdAt: -1 }).toArray();
 
-    const issues = await getCollection<{ projectId: number }>("issues");
-    const sessions = await getCollection<{ projectId: number }>("sessions");
+    const issues = await getCollection<IssueDocument>("issues");
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
 
     return Promise.all(
       items.map(async (item) => ({
-        ...serializeDocument(item),
+        ...serializeOwnedDocument(item),
         _count: {
-          issues: await issues.countDocuments({ projectId: item.id }),
-          codingSessions: await sessions.countDocuments({ projectId: item.id }),
+          issues: await issues.countDocuments(ownedFilter(ownerId, { projectId: item.id })),
+          codingSessions: await sessions.countDocuments(ownedFilter(ownerId, { projectId: item.id })),
         },
       })),
     );
   },
 
-  async getById(id: number) {
+  async getById(ownerId: string, id: number) {
     const projects = await getCollection<ProjectDocument>("projects");
-    const project = await projects.findOne({ id });
+    const project = await projects.findOne(ownedFilter(ownerId, { id }));
     if (!project) return null;
 
-    const issues = await getCollection<{ id: number; title: string; description: string; severity: string; status: string; projectId: number; createdAt: Date }>("issues");
-    const sessions = await getCollection<{ id: number; projectId: number; date: Date; hours: number; notes?: string | null }>("sessions");
+    const issues = await getCollection<IssueDocument>("issues");
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
 
     return {
-      ...serializeDocument(project),
-      issues: await issues.find({ projectId: id }).sort({ createdAt: -1 }).toArray(),
-      codingSessions: await sessions.find({ projectId: id }).sort({ date: -1 }).toArray(),
+      ...serializeOwnedDocument(project),
+      issues: (await issues.find(ownedFilter(ownerId, { projectId: id })).sort({ createdAt: -1 }).toArray()).map(serializeOwnedDocument),
+      codingSessions: (await sessions.find(ownedFilter(ownerId, { projectId: id })).sort({ date: -1 }).toArray()).map(serializeOwnedDocument),
     };
   },
 
-  async create(data: CreateProjectInput) {
+  async create(ownerId: string, data: CreateProjectInput) {
     const projects = await getCollection<ProjectDocument>("projects");
     const project = {
       id: await getNextId("projects"),
+      ownerId,
       name: data.name,
       description: data.description ?? null,
       status: data.status,
@@ -47,10 +49,10 @@ export const projectService = {
     };
 
     await projects.insertOne(project as ProjectDocument);
-    return serializeDocument(project as ProjectDocument);
+    return serializeOwnedDocument(project as ProjectDocument);
   },
 
-  async update(id: number, data: UpdateProjectInput) {
+  async update(ownerId: string, id: number, data: UpdateProjectInput) {
     const projects = await getCollection<ProjectDocument>("projects");
     const update: Partial<ProjectDocument> = {};
 
@@ -58,13 +60,21 @@ export const projectService = {
     if (data.description !== undefined) update.description = data.description;
     if (data.status !== undefined) update.status = data.status;
 
-    const result = await projects.findOneAndUpdate({ id }, { $set: update }, { returnDocument: "after" });
-    return result ? serializeDocument(result) : null;
+    const result = await projects.findOneAndUpdate(ownedFilter(ownerId, { id }), { $set: update }, { returnDocument: "after" });
+    return result ? serializeOwnedDocument(result) : null;
   },
 
-  async remove(id: number) {
+  async remove(ownerId: string, id: number) {
     const projects = await getCollection<ProjectDocument>("projects");
-    const result = await projects.deleteOne({ id });
-    return result.deletedCount > 0;
+    const result = await projects.deleteOne(ownedFilter(ownerId, { id }));
+    if (result.deletedCount === 0) return false;
+
+    const issues = await getCollection<IssueDocument>("issues");
+    const sessions = await getCollection<CodingSessionDocument>("sessions");
+    await Promise.all([
+      issues.deleteMany(ownedFilter(ownerId, { projectId: id })),
+      sessions.deleteMany(ownedFilter(ownerId, { projectId: id })),
+    ]);
+    return true;
   },
 };
