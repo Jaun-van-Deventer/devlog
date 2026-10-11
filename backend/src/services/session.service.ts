@@ -1,37 +1,36 @@
 import { HttpError } from "../lib/httpError.js";
-import { getCollection, getNextId, serializeDocument } from "../lib/mongodb.js";
+import { getCollection, getNextId } from "../lib/mongodb.js";
+import { ownedFilter, serializeOwnedDocument } from "../lib/ownership.js";
 import type { CodingSessionDocument, ProjectDocument } from "../lib/mongoModels.js";
 import type { CreateSessionInput } from "../types/session.js";
 
 export const sessionService = {
-  async list() {
+  async list(ownerId: string) {
     const sessions = await getCollection<CodingSessionDocument>("sessions");
-    const items = await sessions.find({}).sort({ date: -1 }).toArray();
+    const items = await sessions.find(ownedFilter(ownerId)).sort({ date: -1 }).toArray();
     const projects = await getCollection<ProjectDocument>("projects");
 
     return Promise.all(
-      items.map(async (item) => ({
-        ...serializeDocument(item),
-        project: await projects.findOne({ id: item.projectId }),
-      })),
+      items.map(async (item) => {
+        const project = await projects.findOne(ownedFilter(ownerId, { id: item.projectId }));
+        return { ...serializeOwnedDocument(item), project: project ? serializeOwnedDocument(project) : null };
+      }),
     );
   },
 
-  async getById(id: number) {
+  async getById(ownerId: string, id: number) {
     const sessions = await getCollection<CodingSessionDocument>("sessions");
-    const session = await sessions.findOne({ id });
+    const session = await sessions.findOne(ownedFilter(ownerId, { id }));
     if (!session) return null;
 
     const projects = await getCollection<ProjectDocument>("projects");
-    return {
-      ...serializeDocument(session),
-      project: await projects.findOne({ id: session.projectId }),
-    };
+    const project = await projects.findOne(ownedFilter(ownerId, { id: session.projectId }));
+    return { ...serializeOwnedDocument(session), project: project ? serializeOwnedDocument(project) : null };
   },
 
-  async create(data: CreateSessionInput) {
+  async create(ownerId: string, data: CreateSessionInput) {
     const projects = await getCollection<ProjectDocument>("projects");
-    const project = await projects.findOne({ id: data.projectId });
+    const project = await projects.findOne(ownedFilter(ownerId, { id: data.projectId }));
     if (!project) {
       throw new HttpError(404, "Project not found");
     }
@@ -39,6 +38,7 @@ export const sessionService = {
     const sessions = await getCollection<CodingSessionDocument>("sessions");
     const session = {
       id: await getNextId("sessions"),
+      ownerId,
       projectId: data.projectId,
       date: data.date,
       hours: data.hours,
@@ -47,14 +47,14 @@ export const sessionService = {
 
     await sessions.insertOne(session as CodingSessionDocument);
     return {
-      ...serializeDocument(session as CodingSessionDocument),
-      project: serializeDocument(project),
+      ...serializeOwnedDocument(session as CodingSessionDocument),
+      project: serializeOwnedDocument(project),
     };
   },
 
-  async remove(id: number) {
+  async remove(ownerId: string, id: number) {
     const sessions = await getCollection<CodingSessionDocument>("sessions");
-    const result = await sessions.deleteOne({ id });
+    const result = await sessions.deleteOne(ownedFilter(ownerId, { id }));
     return result.deletedCount > 0;
   },
 };

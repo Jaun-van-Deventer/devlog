@@ -14,6 +14,21 @@ export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api',
 })
 
+let getSessionToken: (() => Promise<string | null>) | undefined
+
+export function setSessionTokenGetter(getter: (() => Promise<string | null>) | undefined) {
+  getSessionToken = getter
+}
+
+api.interceptors.request.use(async (config) => {
+  const token = await getSessionToken?.()
+  if (!token) {
+    throw new Error('A signed-in session is required to access DevLog data.')
+  }
+  config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
 async function unwrap<T>(request: Promise<{ data: ApiResponse<T> }>): Promise<T> {
   const response = await request
   if (!response.data.success) {

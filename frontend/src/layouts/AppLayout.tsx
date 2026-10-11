@@ -1,4 +1,5 @@
 import { BarChart3 } from 'lucide-react'
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useFocusMode } from '../contexts/FocusModeContext'
 import { navLinks } from '../routes/nav'
@@ -46,16 +47,35 @@ export function AppLayout() {
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Workspace</p>
               <h1 className="text-xl font-black">Development operations</h1>
             </div>
-            <button
-              onClick={toggleFocusMode}
-              className={`hidden rounded px-3 py-2 text-sm font-bold transition sm:block ${
-                isFocusMode
-                  ? 'border border-slate-300 bg-white text-slate-950 hover:bg-slate-50'
-                  : 'bg-[#d7ff71] text-slate-950 hover:bg-[#c9f063]'
-              }`}
-            >
-              {isFocusMode ? 'Exit Focus Mode' : 'Focus mode'}
-            </button>
+            <div className="flex items-center gap-3">
+              <Show when="signed-out">
+                <div className="flex items-center gap-2">
+                  <SignInButton mode="modal">
+                    <button className="rounded px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100">
+                      Sign in
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <button className="rounded bg-[#d7ff71] px-3 py-2 text-sm font-bold text-slate-950 transition hover:bg-[#c9f063]">
+                      Sign up
+                    </button>
+                  </SignUpButton>
+                </div>
+              </Show>
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
+              <button
+                onClick={toggleFocusMode}
+                className={`hidden rounded px-3 py-2 text-sm font-bold transition sm:block ${
+                  isFocusMode
+                    ? 'border border-slate-300 bg-white text-slate-950 hover:bg-slate-50'
+                    : 'bg-[#d7ff71] text-slate-950 hover:bg-[#c9f063]'
+                }`}
+              >
+                {isFocusMode ? 'Exit Focus Mode' : 'Focus mode'}
+              </button>
+            </div>
           </header>
           <main className="mx-auto w-full max-w-7xl px-5 py-6">
             <Outlet />

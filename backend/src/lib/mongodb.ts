@@ -59,11 +59,6 @@ export async function getNextId(sequenceName: string) {
   return result.value ?? 1;
 }
 
-export function serializeDocument<T extends { _id?: unknown }>(document: T) {
-  const { _id, ...rest } = document;
-  return rest as Omit<T, "_id">;
-}
-
 async function ensureIndexes() {
   if (!mongoDb) {
     return;
@@ -76,13 +71,19 @@ async function ensureIndexes() {
 
   await Promise.all([
     projects.createIndex({ id: 1 }, { unique: true }),
+    projects.createIndex({ ownerId: 1, id: 1 }, { unique: true }),
+    projects.createIndex({ ownerId: 1, createdAt: -1 }),
     projects.createIndex({ createdAt: -1 }),
     issues.createIndex({ id: 1 }, { unique: true }),
+    issues.createIndex({ ownerId: 1, id: 1 }, { unique: true }),
+    issues.createIndex({ ownerId: 1, projectId: 1, createdAt: -1 }),
     issues.createIndex({ projectId: 1 }),
     issues.createIndex({ status: 1 }),
     issues.createIndex({ severity: 1 }),
     issues.createIndex({ createdAt: -1 }),
     sessions.createIndex({ id: 1 }, { unique: true }),
+    sessions.createIndex({ ownerId: 1, id: 1 }, { unique: true }),
+    sessions.createIndex({ ownerId: 1, projectId: 1, date: -1 }),
     sessions.createIndex({ projectId: 1 }),
     sessions.createIndex({ date: -1 }),
   ]);

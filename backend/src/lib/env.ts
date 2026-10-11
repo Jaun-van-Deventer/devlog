@@ -1,8 +1,12 @@
 import "dotenv/config";
+import dotenv from "dotenv";
 import { z } from "zod";
+
+dotenv.config({ path: ".env.clerk" });
 
 const envSchema = z.object({
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
+  CLERK_SECRET_KEY: z.string().min(1, "CLERK_SECRET_KEY is required"),
   MONGODB_DB_NAME: z.string().default("devlog"),
   PORT: z.coerce.number().int().positive().default(5000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
