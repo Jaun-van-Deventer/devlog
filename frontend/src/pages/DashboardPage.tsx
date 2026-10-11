@@ -11,7 +11,7 @@ export function DashboardPage() {
   }
 
   if (error || !data) {
-    return <EmptyState title="API unavailable" message="Start the backend and PostgreSQL services to load dashboard data." />
+    return <EmptyState title="Loading..." message="Please wait while we load your dashboard data." />
   }
 
   const cards = [
